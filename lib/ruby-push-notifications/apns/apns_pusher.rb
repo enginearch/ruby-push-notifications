@@ -46,31 +46,41 @@ module RubyPushNotifications
         results = []
         i = 0
         while i < binaries.count
-          conn.write binaries[i]
-
-          if i == binaries.count-1
-            conn.flush
-            rs, = IO.select([conn], nil, nil, 2)
+          begin
+            conn.write binaries[i]
+          rescue Exception => e
+            # in case of unhandled error log it, mark in results and try to reopen connection
+            logger.warn "APNS connection write error: " + e.message
+            logger.warn e.backtrace.join("\n")
+            results << UNKNOWN_ERROR_STATUS_CODE
+            conn = APNSConnection.open @certificate, @sandbox, @pass, @options
           else
-            rs, = IO.select([conn], [conn])
-          end
-          if rs && rs.any?
-            packed = rs[0].read 6
-            if packed.nil? && i == 0
-              # The connection wasn't properly open
-              # Probably because of wrong certificate/sandbox? combination
-              results << UNKNOWN_ERROR_STATUS_CODE
+            # this was the default behaviour
+            if i == binaries.count-1
+              conn.flush
+              rs, = IO.select([conn], nil, nil, 2)
             else
-              err = packed.unpack 'ccN'
-              results.slice! err[2]..-1
-              results << err[1]
-              i = err[2]
-              conn = APNSConnection.open @certificate, @sandbox, @pass, @options
+              rs, = IO.select([conn], [conn])
             end
-          else
-            results << NO_ERROR_STATUS_CODE
+            if rs && rs.any?
+              packed = rs[0].read 6
+              if packed.nil? && i == 0
+                # The connection wasn't properly open
+                # Probably because of wrong certificate/sandbox? combination
+                results << UNKNOWN_ERROR_STATUS_CODE
+              else
+                err = packed.unpack 'ccN'
+                results.slice! err[2]..-1
+                results << err[1]
+                i = err[2]
+                conn = APNSConnection.open @certificate, @sandbox, @pass, @options
+              end
+            else
+              results << NO_ERROR_STATUS_CODE
+            end
+          ensure
+            i += 1
           end
-          i += 1
         end
 
         conn.close
