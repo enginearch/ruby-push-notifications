@@ -48,7 +48,7 @@ module RubyPushNotifications
             p "APNS connection write error: " + e.message
             p e.backtrace.join("\n")
             results << UNKNOWN_ERROR_STATUS_CODE
-            conn = APNSConnection.open @certificate, @sandbox, @pass, @options
+            conn = APNSConnection.open @certificate, @sandbox
           else
             # this was the default behaviour
             if i == binaries.count-1
@@ -68,7 +68,7 @@ module RubyPushNotifications
                 results.slice! err[2]..-1
                 results << err[1]
                 i = err[2]
-                conn = APNSConnection.open @certificate, @sandbox, @pass, @options
+                conn = APNSConnection.open @certificate, @sandbox
               end
             else
               results << NO_ERROR_STATUS_CODE
