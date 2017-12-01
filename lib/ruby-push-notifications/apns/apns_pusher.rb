@@ -45,8 +45,8 @@ module RubyPushNotifications
             conn.write binaries[i]
           rescue Exception => e
             # in case of unhandled error log it, mark in results and try to reopen connection
-            logger.warn "APNS connection write error: " + e.message
-            logger.warn e.backtrace.join("\n")
+            p "APNS connection write error: " + e.message
+            p e.backtrace.join("\n")
             results << UNKNOWN_ERROR_STATUS_CODE
             conn = APNSConnection.open @certificate, @sandbox, @pass, @options
           else
